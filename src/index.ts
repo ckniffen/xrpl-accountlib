@@ -4,6 +4,7 @@ import * as derive from "./derive";
 import * as utils from "./utils";
 import { sign, signAndSubmit } from "./sign";
 import * as rawSigning from "./rawSigning";
+import { nativeAsset } from "./nativeAsset";
 
 /* Types ==================================================================== */
 import XRPL_Account from "./schema/Account";
@@ -19,7 +20,6 @@ import {
   encodeForSigning,
   encodeForMultisigning,
   encodeForSigningClaim,
-  nativeAsset,
 } from "ripple-binary-codec";
 import { type DefinitionsData } from "ripple-binary-codec/dist/enums/xrpl-definitions-base";
 

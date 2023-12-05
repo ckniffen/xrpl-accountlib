@@ -1,17 +1,16 @@
 "use strict";
 
-import BN from "bn.js";
-import { flatMap } from "lodash";
+import { bytesToHex, hexToBytes } from '@xrplf/isomorphic/utils'
+import { sha512 } from '@xrplf/isomorphic/sha512'
+import { BigNumber } from "bignumber.js";
 import { decodeAccountID } from "ripple-address-codec";
-import { Buffer as BufferPf } from "buffer/";
 import * as AddressCodec from "ripple-address-codec";
 import { validateMnemonic } from "bip39";
+
 import * as elliptic from "elliptic";
 import { verify, deriveAddress } from "ripple-keypairs";
 import assert from "assert";
-import hashjs from "hash.js";
 import { HashPrefix } from "ripple-binary-codec/dist/hash-prefixes";
-import { sha512Half } from "ripple-binary-codec/dist/hashes";
 import {
   encode,
   decode,
@@ -29,19 +28,15 @@ import { setNativeAsset } from "../sign";
 // Ugly, but no definitions when directly loading the lib file, and Signature() not exported in lib
 const Signature = require("elliptic/lib/elliptic/ec/signature");
 
-function computeBinaryTransactionHash(txBlobHex: string) {
-  const prefix = HashPrefix.transactionID.toString("hex").toUpperCase();
-  const input = BufferPf.from(prefix + txBlobHex, "hex");
-  return sha512Half(input).toString("hex").toUpperCase();
+function sha512Half(bytes: Uint8Array): string {
+  return bytesToHex(sha512(bytes).slice(0, 32))
 }
 
-function bytesToHex(a: number[]): string {
-  return a
-    .map(function (byteValue) {
-      const hex = byteValue.toString(16).toUpperCase();
-      return hex.length > 1 ? hex : "0" + hex;
-    })
-    .join("");
+
+function computeBinaryTransactionHash(txBlobHex: string) {
+  const prefix = bytesToHex(HashPrefix.transactionID).toUpperCase();
+  const input = hexToBytes(prefix + txBlobHex);
+  return sha512Half(input).toUpperCase();
 }
 
 function deriveAddressWithEdPrefixer(publicKey: string) {
@@ -62,10 +57,6 @@ function deriveAddressWithEdPrefixer(publicKey: string) {
       : publicKey;
 
   return deriveAddress(pubKey);
-}
-
-function hexToBytes(a: string): number[] {
-  return new BN(a, 16).toArray(undefined, a.length / 2);
 }
 
 function bufferToHext(buffer: Buffer): string {
@@ -132,7 +123,7 @@ function compressPubKey(pubkey: string): string {
 }
 
 function hash(hex: string): number[] {
-  return hashjs.sha512().update(hexToBytes(hex)).digest().slice(0, 32);
+  return Array.from(sha512(hexToBytes(hex)).slice(0, 32));
 }
 
 function encodeTransaction(
@@ -181,11 +172,11 @@ function secp256k1_p1363ToFullyCanonicalDerSignature(
   };
 
   const bn = {
-    n: new BN(rs.n, 16),
-    s: new BN(rs.s, 16),
+    n: new BigNumber(rs.n, 16),
+    s: new BigNumber(rs.s, 16),
   };
 
-  const nMinusS = bn.n.sub(bn.s);
+  const nMinusS = bn.n.minus(bn.s);
   rs.s = (nMinusS.lt(bn.s) ? nMinusS : bn.s).toString(16).toUpperCase();
 
   const nonCanonicalDer = new Signature(rs).toDER();
@@ -194,11 +185,11 @@ function secp256k1_p1363ToFullyCanonicalDerSignature(
 
 function addressToBigNumber(address: string) {
   const hex = Buffer.from(decodeAccountID(address)).toString("hex");
-  return new BN(hex, 16);
+  return new BigNumber(hex, 16);
 }
 
 function compareSigners(left: any, right: any): number {
-  return addressToBigNumber(left.Signer.Account).cmp(
+  return addressToBigNumber(left.Signer.Account).comparedTo(
     addressToBigNumber(right.Signer.Account)
   );
 }
@@ -209,8 +200,7 @@ function combine(multiSignedTxHex: string[], definitions?: XrplDefinitions) {
     decode(encoded, definitions)
   );
 
-  const sortedSigners = flatMap(
-    multiSignedTx,
+  const sortedSigners = multiSignedTx.flatMap(
     (tx: any) => tx.Signers ?? []
   ).sort(compareSigners);
 

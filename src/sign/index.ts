@@ -7,7 +7,7 @@ import Account from "../schema/Account";
 import { combine, networkTxFee, networkInfo } from "../utils";
 import { XrplClient } from "xrpl-client";
 import assert from "assert";
-import { nativeAsset } from "..";
+import { nativeAsset } from "../nativeAsset";
 
 type SignOptions = {
   [key: string]: any;

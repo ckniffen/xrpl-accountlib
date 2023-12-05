@@ -1,10 +1,9 @@
 import { deriveAddress } from "ripple-keypairs";
 import * as AddressCodec from "ripple-address-codec";
-import * as Elliptic from "elliptic";
-import * as Utils from "../utils";
+import { secp256k1 } from '@noble/curves/secp256k1';
+import { ed25519 } from '@noble/curves/ed25519';
 
-const Ed25519 = new Elliptic.eddsa("ed25519");
-const Secp256k1 = new Elliptic.ec("secp256k1");
+import * as Utils from "../utils";
 
 /* Types ==================================================================== */
 
@@ -127,13 +126,11 @@ export default class XRPL_Account {
         ) {
           const priv = this.keypair.privateKey.slice(2);
           // @ts-ignore
-          const keyBytes = Ed25519.keyFromSecret(priv).pubBytes();
+          const keyBytes = ed25519.getPublicKey(priv)();
           this.keypair.publicKey = "ED" + Utils.bytesToHex(keyBytes);
         } else {
           const priv = this.keypair.privateKey.slice(2);
-          const keyBytes = Secp256k1.keyFromPrivate(priv)
-            .getPublic()
-            .encodeCompressed("array");
+          const keyBytes = secp256k1.getPublicKey(priv, true)
           // @ts-ignore
           this.keypair.publicKey = Utils.bytesToHex(keyBytes);
         }
